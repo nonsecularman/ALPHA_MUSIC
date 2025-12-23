@@ -1,7 +1,6 @@
 import asyncio
 import os
 import re
-import json
 from typing import Union
 import yt_dlp
 from pyrogram.enums import MessageEntityType
@@ -10,13 +9,14 @@ from py_yt import VideosSearch
 from SONALI.utils.formatters import time_to_seconds
 import aiohttp
 from SONALI import LOGGER
+from typing import Union
 
 YOUR_API_URL = None
 FALLBACK_API_URL = "https://shrutibots.site"
 
 async def load_api_url():
     global YOUR_API_URL
-    logger = LOGGER("SONALI.platforms.Youtube.py")
+    logger = LOGGER("ShrutiMusic.platforms.Youtube.py")
     
     try:
         async with aiohttp.ClientSession() as session:
@@ -74,13 +74,16 @@ async def download_song(link: str) -> str:
                     return None
 
                 data = await response.json()
-                stream_url = data.get("stream_url")
+                download_token = data.get("download_token")
                 
-                if not stream_url:
+                if not download_token:
                     return None
+                
+                stream_url = f"{YOUR_API_URL}/stream/{video_id}?type=audio"
                 
                 async with session.get(
                     stream_url,
+                    headers={"X-Download-Token": download_token},
                     timeout=aiohttp.ClientTimeout(total=300)
                 ) as file_response:
                     if file_response.status != 200:
@@ -128,13 +131,16 @@ async def download_video(link: str) -> str:
                     return None
 
                 data = await response.json()
-                stream_url = data.get("stream_url")
+                download_token = data.get("download_token")
                 
-                if not stream_url:
+                if not download_token:
                     return None
+                
+                stream_url = f"{YOUR_API_URL}/stream/{video_id}?type=video"
                 
                 async with session.get(
                     stream_url,
+                    headers={"X-Download-Token": download_token},
                     timeout=aiohttp.ClientTimeout(total=600)
                 ) as file_response:
                     if file_response.status != 200:
