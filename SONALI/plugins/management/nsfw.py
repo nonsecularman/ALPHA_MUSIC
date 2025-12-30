@@ -8,7 +8,7 @@ from PIL import Image
 from pyrogram import Client, filters
 from pyrogram.types import Message
 
-from SONALI.utils.decorators.admin import AdminRights
+from SONALI.utils.decorators import AdminRights
 from SONALI.database.client import (
     set_nsfw_status,
     get_nsfw_status,
