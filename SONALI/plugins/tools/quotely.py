@@ -1,4 +1,5 @@
-import requests
+import aiohttp
+import io
 from pyrogram import filters
 from pyrogram.types import Message
 from SONALI import app   # apna main app
@@ -6,7 +7,7 @@ from SONALI import app   # apna main app
 API_URL = "https://bot.lyo.su/quote/generate"
 
 
-def generate_quote(text, user):
+async def generate_quote(text, user):
     payload = {
         "type": "quote",
         "format": "png",
@@ -20,14 +21,26 @@ def generate_quote(text, user):
                 "avatar": True,
                 "from": {
                     "id": user.id,
-                    "name": user.first_name,
-                    "username": user.username
+                    "name": user.first_name or "User",
+                    "username": user.username or ""
                 },
                 "text": text
             }
         ]
     }
-    return requests.post(API_URL, json=payload).content
+
+    async with aiohttp.ClientSession() as session:
+        async with session.post(API_URL, json=payload) as resp:
+            if resp.status != 200:
+                raise Exception("Quote API failed")
+
+            img_bytes = await resp.read()
+
+            file = io.BytesIO(img_bytes)
+            file.name = "quote.png"   # 🔥 IMPORTANT
+            file.seek(0)              # 🔥 IMPORTANT
+
+            return file
 
 
 @app.on_message(filters.command("qt"))
@@ -48,7 +61,6 @@ async def qt_handler(_, message: Message):
     elif len(cmd) > 1:
         quote_text = message.text.split(None, 1)[1]
 
-        # reply hai → samne wala
         if reply and reply.from_user:
             quote_user = reply.from_user
         else:
@@ -57,13 +69,17 @@ async def qt_handler(_, message: Message):
     else:
         return await message.reply(
             "❌ Usage:\n"
-            "`/qt text`\n"
-            "`/qt -r` (reply required)`"
+            "/qt text\n"
+            "/qt -r  (reply required)"
         )
 
-    img = generate_quote(quote_text, quote_user)
+    try:
+        img = await generate_quote(quote_text, quote_user)
 
-    await message.reply_photo(
-        photo=img,
-        caption="✨ Quotely"
-    )
+        await message.reply_photo(
+            photo=img,
+            caption="✨ Quotely"
+        )
+
+    except Exception as e:
+        await message.reply("❌ Quote generate nahi ho pa rahi.")
