@@ -4,7 +4,7 @@ import requests
 from pyrogram import filters
 from pyrogram.types import Message
 
-from SONALIMusic import app
+from SONALI import app
 from config import LOGGER_ID
 
 
