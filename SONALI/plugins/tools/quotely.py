@@ -4,7 +4,7 @@ from pyrogram import filters
 from pyrogram.types import Message
 from SONALI import app   # apna main app
 
-API_URL = "https://bot.lyo.su/quote/generate"
+API_URL = "https://quotly.netorare.codes/generate"
 
 
 async def generate_quote(text, user):
