@@ -1,76 +1,87 @@
+# LOCAL QT PLUGIN — HEROKU SAFE
 from pyrogram import filters
 from pyrogram.types import Message
-from SONALI import app
+from AnnieXMedia import app
 from PIL import Image, ImageDraw, ImageFont
 import io
 import textwrap
 
-print("🔥 LOCAL QT PLUGIN LOADED (HEROKU SAFE) 🔥")
+print("🔥 LOCAL QT PLUGIN LOADED (NO API) 🔥")
 
 
-def create_quote_image(text, author):
-    width, height = 800, 400
-    bg_color = (30, 30, 30)
-    text_color = (255, 255, 255)
+def make_quote_image(text: str, author: str):
+    W, H = 900, 450
+    bg = (22, 18, 35)
+    fg = (255, 255, 255)
 
-    img = Image.new("RGB", (width, height), bg_color)
+    img = Image.new("RGB", (W, H), bg)
     draw = ImageDraw.Draw(img)
 
     try:
-        font = ImageFont.truetype("DejaVuSans-Bold.ttf", 32)
+        font = ImageFont.truetype("DejaVuSans-Bold.ttf", 36)
         small = ImageFont.truetype("DejaVuSans.ttf", 24)
     except:
         font = ImageFont.load_default()
         small = ImageFont.load_default()
 
-    wrapped = textwrap.fill(text, 40)
-    w, h = draw.multiline_textsize(wrapped, font=font)
+    wrapped = textwrap.fill(text, 45)
+    tw, th = draw.multiline_textbbox((0, 0), wrapped, font=font)[2:]
 
     draw.multiline_text(
-        ((width - w) / 2, (height - h) / 2 - 20),
+        ((W - tw) / 2, (H - th) / 2 - 20),
         wrapped,
-        fill=text_color,
+        fill=fg,
         font=font,
-        align="center"
+        align="center",
     )
 
     draw.text(
-        (width - 20, height - 40),
+        (W - 30, H - 35),
         f"- {author}",
-        fill=(200, 200, 200),
+        fill=(180, 180, 180),
         font=small,
-        anchor="rs"
+        anchor="rs",
     )
 
-    file = io.BytesIO()
-    img.save(file, "PNG")
-    file.name = "quote.png"
-    file.seek(0)
-    return file
+    bio = io.BytesIO()
+    img.save(bio, "PNG")
+    bio.name = "quote.png"
+    bio.seek(0)
+    return bio
 
 
 @app.on_message(filters.command("qt"))
 async def qt_handler(_, message: Message):
     reply = message.reply_to_message
-    cmd = message.command
+    args = message.text.split()
 
-    if len(cmd) == 2 and cmd[1] == "-r":
-        if not reply or not reply.text:
-            return await message.reply("❌ Reply to a text message")
+    # 🧊 Processing message (EDIT hoga)
+    processing = await message.reply_text("⏳ Generating quote...")
 
-        text = reply.text
-        author = reply.from_user.first_name
+    # /qt -r (reply mode)
+    if len(args) > 1 and args[1] == "-r":
+        if not reply or not (reply.text or reply.caption):
+            return await processing.edit("❌ Reply to a text message")
 
-    elif len(cmd) > 1:
+        text = reply.text or reply.caption
+        author = reply.from_user.first_name if reply.from_user else "User"
+
+    # /qt text
+    elif len(args) > 1:
         text = message.text.split(None, 1)[1]
-        author = message.from_user.first_name
+        author = message.from_user.first_name if message.from_user else "User"
 
     else:
-        return await message.reply(
+        return await processing.edit(
             "❌ Usage:\n"
             "`/qt your text`\n"
-            "`/qt -r` (reply)"
+            "`/qt -r` (reply to a message)`"
         )
 
-    img = create_quote_image(text, author)
-    await message.reply_photo(img, caption="✨ Quotely")
+    try:
+        img = make_quote_image(text, author)
+        await message.reply_photo(photo=img, caption="✨ Quotely")
+        await processing.delete()
+
+    except Exception as e:
+        await processing.edit(f"❌ Failed:\n`{e}`")
