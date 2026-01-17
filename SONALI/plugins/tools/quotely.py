@@ -4,12 +4,16 @@ from pyrogram import filters
 from pyrogram.types import Message
 from SONALI import app
 
-# ✅ WORKING QUOTLY API
+# ✅ ONLY WORKING API (OLD API REMOVED COMPLETELY)
 API_URL = "https://api.quotly.dev/generate"
+
+print("🔥 QT PLUGIN LOADED ON HEROKU 🔥")
+print("🔥 USING API:", API_URL)
 
 
 async def generate_quote(text, user):
     payload = {
+        "type": "quote",
         "messages": [
             {
                 "text": text,
@@ -20,22 +24,19 @@ async def generate_quote(text, user):
                 },
                 "reply": False
             }
-        ],
-        "type": "quote"
+        ]
     }
 
-    timeout = aiohttp.ClientTimeout(total=30)
+    timeout = aiohttp.ClientTimeout(total=20)
 
     async with aiohttp.ClientSession(timeout=timeout) as session:
         async with session.post(API_URL, json=payload) as resp:
             if resp.status != 200:
-                err = await resp.text()
-                raise Exception(f"API Error {resp.status}: {err}")
+                raise Exception(f"API ERROR: {resp.status}")
 
             data = await resp.read()
-
             if not data:
-                raise Exception("Empty image data received")
+                raise Exception("EMPTY IMAGE DATA")
 
             file = io.BytesIO(data)
             file.name = "quote.png"
@@ -48,7 +49,7 @@ async def qt_handler(_, message: Message):
     reply = message.reply_to_message
     cmd = message.command
 
-    # /qt -r (reply)
+    # /qt -r (reply quote)
     if len(cmd) == 2 and cmd[1] == "-r":
         if not reply or not (reply.text or reply.caption):
             return await message.reply("❌ Reply to a text message")
@@ -73,4 +74,4 @@ async def qt_handler(_, message: Message):
         await message.reply_photo(photo=img, caption="✨ Quotely")
 
     except Exception as e:
-        await message.reply(f"❌ Quote generate failed\n\n`{e}`")
+        await message.reply(f"❌ Quote generate failed\n`{e}`")
