@@ -1,47 +1,52 @@
-import aiohttp
-import io
 from pyrogram import filters
 from pyrogram.types import Message
 from SONALI import app
+from PIL import Image, ImageDraw, ImageFont
+import io
+import textwrap
 
-# ✅ ONLY WORKING API (OLD API REMOVED COMPLETELY)
-API_URL = "https://api.quotly.dev/generate"
-
-print("🔥 QT PLUGIN LOADED ON HEROKU 🔥")
-print("🔥 USING API:", API_URL)
+print("🔥 LOCAL QT PLUGIN LOADED (HEROKU SAFE) 🔥")
 
 
-async def generate_quote(text, user):
-    payload = {
-        "type": "quote",
-        "messages": [
-            {
-                "text": text,
-                "author": {
-                    "id": user.id,
-                    "name": user.first_name or "User",
-                    "username": user.username or ""
-                },
-                "reply": False
-            }
-        ]
-    }
+def create_quote_image(text, author):
+    width, height = 800, 400
+    bg_color = (30, 30, 30)
+    text_color = (255, 255, 255)
 
-    timeout = aiohttp.ClientTimeout(total=20)
+    img = Image.new("RGB", (width, height), bg_color)
+    draw = ImageDraw.Draw(img)
 
-    async with aiohttp.ClientSession(timeout=timeout) as session:
-        async with session.post(API_URL, json=payload) as resp:
-            if resp.status != 200:
-                raise Exception(f"API ERROR: {resp.status}")
+    try:
+        font = ImageFont.truetype("DejaVuSans-Bold.ttf", 32)
+        small = ImageFont.truetype("DejaVuSans.ttf", 24)
+    except:
+        font = ImageFont.load_default()
+        small = ImageFont.load_default()
 
-            data = await resp.read()
-            if not data:
-                raise Exception("EMPTY IMAGE DATA")
+    wrapped = textwrap.fill(text, 40)
+    w, h = draw.multiline_textsize(wrapped, font=font)
 
-            file = io.BytesIO(data)
-            file.name = "quote.png"
-            file.seek(0)
-            return file
+    draw.multiline_text(
+        ((width - w) / 2, (height - h) / 2 - 20),
+        wrapped,
+        fill=text_color,
+        font=font,
+        align="center"
+    )
+
+    draw.text(
+        (width - 20, height - 40),
+        f"- {author}",
+        fill=(200, 200, 200),
+        font=small,
+        anchor="rs"
+    )
+
+    file = io.BytesIO()
+    img.save(file, "PNG")
+    file.name = "quote.png"
+    file.seek(0)
+    return file
 
 
 @app.on_message(filters.command("qt"))
@@ -49,29 +54,23 @@ async def qt_handler(_, message: Message):
     reply = message.reply_to_message
     cmd = message.command
 
-    # /qt -r (reply quote)
     if len(cmd) == 2 and cmd[1] == "-r":
-        if not reply or not (reply.text or reply.caption):
+        if not reply or not reply.text:
             return await message.reply("❌ Reply to a text message")
 
-        quote_text = reply.text or reply.caption
-        quote_user = reply.from_user
+        text = reply.text
+        author = reply.from_user.first_name
 
-    # /qt text
     elif len(cmd) > 1:
-        quote_text = message.text.split(None, 1)[1]
-        quote_user = reply.from_user if reply else message.from_user
+        text = message.text.split(None, 1)[1]
+        author = message.from_user.first_name
 
     else:
         return await message.reply(
             "❌ Usage:\n"
             "`/qt your text`\n"
-            "`/qt -r` (reply to a message)"
+            "`/qt -r` (reply)"
         )
 
-    try:
-        img = await generate_quote(quote_text, quote_user)
-        await message.reply_photo(photo=img, caption="✨ Quotely")
-
-    except Exception as e:
-        await message.reply(f"❌ Quote generate failed\n`{e}`")
+    img = create_quote_image(text, author)
+    await message.reply_photo(img, caption="✨ Quotely")
