@@ -1,7 +1,7 @@
 # LOCAL QT PLUGIN — HEROKU SAFE
 from pyrogram import filters
 from pyrogram.types import Message
-from AnnieXMedia import app
+from SONALI import app
 from PIL import Image, ImageDraw, ImageFont
 import io
 import textwrap
